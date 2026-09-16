@@ -68,8 +68,9 @@ export default function AdminApp() {
           <>
             <EventEditor
               events={content.events || []}
-              onSave={async (events) => {
-                const updated = await updateEvents(token, events);
+              rightSlides={content.right_slides || []}
+              onSave={async (events, rightSlides) => {
+                const updated = await updateEvents(token, events, rightSlides);
                 setContent(updated);
               }}
               onUploadImage={async (file) => {

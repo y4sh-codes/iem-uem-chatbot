@@ -11,6 +11,9 @@ export async function PUT(request: Request) {
   if (body.events && Array.isArray(body.events)) {
     content.events = body.events;
   }
+  if (body.right_slides && Array.isArray(body.right_slides)) {
+    content.right_slides = body.right_slides;
+  }
   
   await saveContent(content);
   return NextResponse.json(content);

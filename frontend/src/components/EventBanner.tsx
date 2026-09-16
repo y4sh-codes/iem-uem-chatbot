@@ -1,15 +1,10 @@
-import { useState, useEffect, useRef } from "react";
-import type { EventSlide } from "../api";
+import { useState, useEffect } from "react";
+import type { EventSlide, RightPanelSlide } from "../api";
 import "./EventBanner.css";
 
 interface EventBannerProps {
   events: EventSlide[];
-}
-
-interface RightPanelSlide {
-  title: string;
-  subtitle: string;
-  details: string;
+  rightSlides?: RightPanelSlide[];
 }
 
 const defaultRightSlides: RightPanelSlide[] = [
@@ -20,7 +15,7 @@ const defaultRightSlides: RightPanelSlide[] = [
   }
 ];
 
-export default function EventBanner({ events }: EventBannerProps) {
+export default function EventBanner({ events, rightSlides: propRightSlides }: EventBannerProps) {
   // LEFT SLIDES
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isTransitioning, setIsTransitioning] = useState(true);
@@ -54,47 +49,10 @@ export default function EventBanner({ events }: EventBannerProps) {
   const numSlides = slidesToRender.length > 0 ? slidesToRender.length : 1;
 
   // RIGHT SLIDES
-  const lastRawData = useRef<string | null>(null);
-
-  const [rightSlides, setRightSlides] = useState<RightPanelSlide[]>(() => {
-    try {
-      const data = localStorage.getItem("eventPanelSlides");
-      if (data) {
-        lastRawData.current = data;
-        return JSON.parse(data);
-      }
-      const t = localStorage.getItem("eventPanelTitle");
-      if (t) {
-        return [{
-          title: t,
-          subtitle: localStorage.getItem("eventPanelSubtitle") || "",
-          details: localStorage.getItem("eventPanelDetails") || ""
-        }];
-      }
-    } catch {}
-    return defaultRightSlides;
-  });
+  const rightSlides = propRightSlides && propRightSlides.length > 0 ? propRightSlides : defaultRightSlides;
 
   const [rightIndex, setRightIndex] = useState(0);
   const [rightTransitioning, setRightTransitioning] = useState(true);
-
-  useEffect(() => {
-    const handleStorage = () => {
-      try {
-        const data = localStorage.getItem("eventPanelSlides");
-        if (data && data !== lastRawData.current) {
-          lastRawData.current = data;
-          setRightSlides(JSON.parse(data));
-        }
-      } catch {}
-    };
-    window.addEventListener("storage", handleStorage);
-    const interval = setInterval(handleStorage, 2000);
-    return () => {
-      window.removeEventListener("storage", handleStorage);
-      clearInterval(interval);
-    };
-  }, []);
 
   useEffect(() => {
     setRightIndex(0);
