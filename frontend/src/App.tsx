@@ -58,7 +58,7 @@ export default function App() {
 
       <Ticker items={content.top_ticker} position="top" />
 
-      <EventBanner events={resolvedEvents} />
+      <EventBanner events={resolvedEvents} rightSlides={content.right_slides} />
 
       <Ticker items={content.bottom_ticker} position="bottom" />
 

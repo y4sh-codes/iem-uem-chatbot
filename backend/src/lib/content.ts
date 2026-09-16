@@ -1,5 +1,11 @@
 import { pool } from './db';
 
+export interface RightPanelSlide {
+  title: string;
+  subtitle: string;
+  details: string;
+}
+
 export interface EventSlide {
   title: string;
   subtitle: string;
@@ -10,6 +16,7 @@ export interface KioskContent {
   top_ticker: string[];
   bottom_ticker: string[];
   events: EventSlide[];
+  right_slides?: RightPanelSlide[];
 }
 
 const defaultContent: KioskContent = {
@@ -27,6 +34,13 @@ const defaultContent: KioskContent = {
       title: "Guest Lecture: AI in Modern Engineering", 
       subtitle: "Auditorium Hall 2 · 11:00 AM – 1:00 PM", 
       image_url: "https://images.unsplash.com/photo-1524178232363-1fb2b075b655?q=80&w=1600&auto=format&fit=crop" 
+    }
+  ],
+  right_slides: [
+    {
+      title: "UPCOMING EVENTS",
+      subtitle: "Join us for our next big activities",
+      details: "IEM-UEM Group constantly organizes tech fests, cultural programs, and placement drives to ensure all-around development."
     }
   ]
 };

@@ -2,6 +2,12 @@
 // server's address once deployed (e.g. "http://192.168.1.50:8000").
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
 
+export interface RightPanelSlide {
+  title: string;
+  subtitle: string;
+  details: string;
+}
+
 export interface EventSlide {
   title: string;
   subtitle: string;
@@ -12,6 +18,7 @@ export interface KioskContent {
   top_ticker: string[];
   bottom_ticker: string[];
   events: EventSlide[];
+  right_slides?: RightPanelSlide[];
 }
 
 export async function fetchContent(): Promise<KioskContent> {
@@ -71,12 +78,13 @@ export async function updateTickers(
 
 export async function updateEvents(
   token: string,
-  events: EventSlide[]
+  events: EventSlide[],
+  right_slides: RightPanelSlide[]
 ): Promise<KioskContent> {
   const res = await fetch(`${API_BASE_URL}/api/admin/content/event`, {
     method: "PUT",
     headers: { "Content-Type": "application/json", ...authHeaders(token) },
-    body: JSON.stringify({ events }),
+    body: JSON.stringify({ events, right_slides }),
   });
   if (!res.ok) throw new Error(`Failed to update events (${res.status})`);
   return res.json();

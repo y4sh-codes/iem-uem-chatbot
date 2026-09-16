@@ -1,42 +1,29 @@
-import { useRef, useState } from "react";
-import { resolveImageUrl, type EventSlide } from "../api";
+import { useRef, useState, useEffect } from "react";
+import { resolveImageUrl, type EventSlide, type RightPanelSlide } from "../api";
 
 interface EventEditorProps {
   events: EventSlide[];
-  onSave: (events: EventSlide[]) => Promise<void>;
+  rightSlides: RightPanelSlide[];
+  onSave: (events: EventSlide[], rightSlides: RightPanelSlide[]) => Promise<void>;
   onUploadImage: (file: File) => Promise<{ urls: string[] }>;
-}
-
-interface RightPanelSlide {
-  title: string;
-  subtitle: string;
-  details: string;
 }
 
 export default function EventEditor({
   events,
+  rightSlides: initialRightSlides,
   onSave,
   onUploadImage,
 }: EventEditorProps) {
   const [localEvents, setLocalEvents] = useState<EventSlide[]>(events || []);
-  
-  // Local storage state for right panel array
-  const [rightSlides, setRightSlides] = useState<RightPanelSlide[]>(() => {
-    try {
-      const data = localStorage.getItem("eventPanelSlides");
-      if (data) return JSON.parse(data);
-      // migrate from old single string format if present
-      const t = localStorage.getItem("eventPanelTitle");
-      if (t) {
-        return [{
-          title: t,
-          subtitle: localStorage.getItem("eventPanelSubtitle") || "",
-          details: localStorage.getItem("eventPanelDetails") || ""
-        }];
-      }
-    } catch {}
-    return [{ title: "UPCOMING EVENTS", subtitle: "Join us for our next big activities", details: "IEM-UEM Group constantly organizes tech fests, cultural programs, and placement drives to ensure all-around development." }];
-  });
+  const [rightSlides, setRightSlides] = useState<RightPanelSlide[]>(initialRightSlides || []);
+
+  useEffect(() => {
+    setLocalEvents(events || []);
+  }, [events]);
+
+  useEffect(() => {
+    setRightSlides(initialRightSlides || []);
+  }, [initialRightSlides]);
 
   const [saving, setSaving] = useState(false);
   const [uploadingIdx, setUploadingIdx] = useState<number | null>(null);
@@ -47,11 +34,7 @@ export default function EventEditor({
     setSaving(true);
     setMessage("");
     try {
-      localStorage.setItem("eventPanelSlides", JSON.stringify(rightSlides));
-      // dispatch storage event so other tabs/components update
-      window.dispatchEvent(new Event("storage"));
-
-      await onSave(localEvents);
+      await onSave(localEvents, rightSlides);
       setMessage("Saved.");
       setTimeout(() => setMessage(""), 2500);
     } catch (err) {
