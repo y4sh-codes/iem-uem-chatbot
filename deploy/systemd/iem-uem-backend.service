@@ -1,4 +1,4 @@
-# systemd unit for the IEM-UEM kiosk backend (FastAPI + RAG pipeline).
+# systemd unit for the IEM-UEM kiosk backend.
 #
 # Install:
 #   sudo cp deploy/systemd/iem-uem-backend.service /etc/systemd/system/
@@ -13,7 +13,7 @@
 # placeholders won't work as-is.
 
 [Unit]
-Description=IEM-UEM Kiosk Backend (FastAPI + RAG)
+Description=IEM-UEM Kiosk Backend (FastAPI)
 After=network.target postgresql.service
 Wants=postgresql.service
 
@@ -42,7 +42,7 @@ StartLimitBurst=5
 NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=strict
-ReadWritePaths=/opt/iem-uem-chatbot/backend/data /opt/iem-uem-chatbot/backend/index_store /opt/iem-uem-chatbot/backend/knowledge_base
+ReadWritePaths=/opt/iem-uem-chatbot/backend/data
 
 [Install]
 WantedBy=multi-user.target

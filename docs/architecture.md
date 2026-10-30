@@ -3,96 +3,65 @@
 ## Current state
 
 ```
-┌─────────────────────────┐         ┌──────────────────────────────┐
-│   frontend/               │  HTTP   │   backend/                     │
-│   React + TS (Vite)       │ ──────> │   FastAPI (app/api.py)          │
-│   kiosk UI + chat widget   │ <────── │   ├─ /ask       -> RAGPipeline    │
-│   + admin portal (/admin)   │         │   ├─ /content   -> content_store  │
-│                              │         │   └─ /admin/*  -> auth-protected  │
-└─────────────────────────┘         └──────────────────────────────┘
+┌──────────────────────────────────────────────┐
+│                 Next.js app                  │
+│                                              │
+│  /            kiosk display (client page)    │
+│  /admin       admin portal (client page)     │
+│  /api/*       route handlers (Node runtime)  │
+│                                              │
+│              │ same-origin fetch             │
+│              ▼                               │
+│  PostgreSQL (Neon) via pg                    │
+└──────────────────────────────────────────────┘
 ```
 
-Both halves are built and connected:
-- `frontend/` fetches live content from `/content` and asks questions via
-  `/ask`. If the backend is unreachable, it falls back to
-  `src/data/mockData.ts` so the kiosk display doesn't go blank.
-- `backend/` serves real RAG answers, and stores/serves kiosk content
-  (event banner, tickers) that the admin portal manages.
+The frontend and backend are one Next.js application. Pages and API routes are
+served from the same origin, so the client calls `/api/...` directly with no
+CORS or separate backend URL.
 
 ## Request flow
 
-**Kiosk asking a question:**
-`ChatWidget.tsx` → `askQuestion()` in `api.ts` → `POST /ask` → `RAGPipeline.ask()`
-(hybrid retrieval + LangGraph guard/generate) → answer flows back and is
-both displayed and spoken (TTS).
-
 **Kiosk loading content:**
-`App.tsx` fetches `GET /content` on load and every 60s → renders tickers +
-event banner from live data (falls back to mock data if the fetch fails).
+`src/app/page.tsx` fetches `GET /api/content` on load and every 60 seconds,
+then renders the header, tickers, and event banner. If the request fails it
+keeps the mock data from `src/data/mockData.ts` on screen.
 
 **Admin updating content:**
-`/admin` → login (`POST /auth/login`) → JWT stored in `sessionStorage` →
-`PUT /admin/content/tickers`, `PUT /admin/content/event`,
-`POST /admin/content/event/image` (all require the JWT) → `content_store.py`
-persists to `backend/data/content.json` and `backend/data/uploads/`.
+`/admin` → login (`POST /api/auth/login`) → JWT stored in `sessionStorage` →
+`PUT /api/admin/content/tickers`, `PUT /api/admin/content/event`,
+`POST /api/admin/content/event/images` (all require the JWT). Content is
+persisted in PostgreSQL; uploaded images are stored in the `uploaded_images`
+table and served by `GET /api/images/[id]`.
 
-**Admin re-indexing the chatbot's knowledge base:**
-Add files to `backend/knowledge_base/` → click "Refresh Index" in the admin
-portal → `POST /admin/refresh-index` → `RAGPipeline.refresh_index()`
-re-scans and rebuilds in place, no server restart needed.
+**Event submissions:**
+Admins submit events through `/api/admin/event-submissions`; super-admins list
+and review them through `/api/admin/event-submissions` and
+`/api/admin/event-submissions/review`.
 
-## Deployment target
+## Deployment
 
-- **Backend**: college server, 24GB VRAM, Ollama + FastAPI (uvicorn) running
-  as a persistent systemd service.
-- **Frontend**: built as static files (`npm run build` → `dist/`) and served
-  from the same server via nginx, with SPA fallback configured so `/admin`
-  works when navigated to directly, not just via client-side link.
-- **Monitoring**: Prometheus scrapes the backend's `/metrics`, Grafana
-  visualizes it, Loki/Promtail ships backend logs from the systemd journal.
+- **Platform:** Vercel, with the repository root as the project root.
+- **Database:** Neon PostgreSQL, using the pooled connection string.
+- **Environment variables:** `DATABASE_URL`, `JWT_SECRET_KEY`, and optional
+  `SUPER_ADMIN_USERNAME` / `SUPER_ADMIN_PASSWORD`.
+- **Build output:** Vercel's native Next.js output. `output: "standalone"` is
+  enabled only outside Vercel, for the Docker image.
+- **Database bootstrap:** `npm run init-db` must be run once against Neon; it is
+  not executed during the Vercel build.
 
-All of the above is ready to use in `deploy/` (systemd unit, nginx config,
-Docker Compose monitoring stack) -- see `deploy/README.md` for the install
-steps. Paths, domains, and secrets still need filling in for your actual
-server.
+## Serverless constraints
+
+- Route handlers run as Node.js functions and use `pg`. Use Neon's pooled
+  connection string (`-pooler` hostname) to avoid connection exhaustion.
+- Uploaded images live in Postgres, so each upload is limited by Vercel's 4.5 MB
+  request body limit.
+- No application data is written to the local filesystem; the optional
+  `data/content.json` seed is only used by `init-db` when present.
 
 ## Before deploying for real
 
-A few things ship with dev-safe-but-not-production-safe defaults, called out
-here so they don't get missed:
-
-- **Admin accounts** — stored in Postgres with bcrypt-hashed passwords, no
-  default/hardcoded credentials (see `backend/README.md` for
-  `manage_admin.py`). Make sure `DATABASE_URL` points at your real Postgres
-  instance, not the local dev default.
-- **JWT secret** — defaults to a placeholder string. Generate a real random
-  secret and set `JWT_SECRET_KEY` via environment variable.
-- **CORS origins** — `CORS_ORIGINS` in `app/config.py` only allows
-  `localhost:5173` right now. Add the deployed frontend's actual URL.
-- **`VITE_API_BASE_URL`** — frontend defaults to `http://localhost:8000`.
-  Set this to the backend's real address for the deployed build.
-- **HTTPS** — the nginx config in `deploy/nginx/` ships as plain HTTP with
-  an HTTPS block template commented out at the bottom. Fill in real
-  certificate paths (Let's Encrypt for a public domain, self-signed for an
-  internal-only LAN) before relying on this outside of local testing.
-
-## Rate limiting and monitoring (now built)
-
-- `/ask` and `/auth/login` are rate-limited per-IP (`slowapi`), tuned in
-  `app/config.py` (`ASK_RATE_LIMIT`, `LOGIN_RATE_LIMIT`). Limits are
-  in-memory/per-process -- would need a shared backend (e.g. Redis) if ever
-  scaled to multiple backend processes.
-- `/metrics` exposes Prometheus-format metrics automatically
-  (`prometheus-fastapi-instrumentator`). Don't expose this endpoint
-  publicly -- the provided nginx config already blocks it there; Prometheus
-  reaches it directly on the backend's own port instead.
-
-## Planned, not yet built
-
-- Multi-admin accounts already work at the DB level (`manage_admin.py`
-  supports multiple users), but there's no audit log of who changed what --
-  fine for one kiosk's back office with a couple of trusted staff, not for
-  larger-scale accountability needs.
-- Alerting on top of the Grafana dashboard (e.g. notify if the backend goes
-  down, or error rate spikes) isn't configured -- the dashboard shows the
-  data, but nothing pages anyone yet.
+- Change the seeded `admin` / `admin` account password.
+- Set a real random `JWT_SECRET_KEY` in Vercel (the fallback is development-only).
+- Confirm `DATABASE_URL` includes `sslmode=require`.
+- Keep the admin portal behind HTTPS; Vercel provides this by default.

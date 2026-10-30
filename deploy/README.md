@@ -1,5 +1,10 @@
 # Deployment
 
+> **Note:** the primary deployment target is now Vercel, using the unified
+> Next.js app at the repository root (see the root `README.md`). The
+> FastAPI/nginx/systemd files below are legacy self-hosting references from
+> the pre-migration layout and are not used by the Vercel deployment.
+
 Everything needed to run this as a persistent, monitored service instead of
 `python run_api.py` in a terminal window.
 
@@ -58,10 +63,9 @@ self-signed cert (internal-only LAN).
 Already built into the backend itself (`app/api.py`, via `slowapi`) -- no
 separate deployment step needed. Current limits, set in `app/config.py`:
 
-- `/ask`: 15 requests/minute per IP
 - `/auth/login`: 5 requests/minute per IP (brute-force protection)
 
-Adjust `ASK_RATE_LIMIT` / `LOGIN_RATE_LIMIT` in `app/config.py` if these feel
+Adjust `LOGIN_RATE_LIMIT` in `app/config.py` if these feel
 too tight or too loose for real kiosk traffic. Note: limits are in-memory
 and per-process -- fine for a single backend instance, but would need a
 shared store (e.g. Redis) if this were ever scaled to multiple backend
@@ -106,8 +110,7 @@ directly on the backend's own port instead.
 
 ## Suggested order
 
-1. Get the backend answering questions correctly (`run_chat.py`) before
-   worrying about any of this.
+1. Get the backend running correctly before worrying about any of this.
 2. Set up Postgres + create an admin account (`manage_admin.py`) --
    see `backend/README.md`.
 3. systemd (step 1 above) -- so the backend survives reboots/crashes.

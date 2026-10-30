@@ -1,89 +1,106 @@
-# IEM-UEM Kiosk Chatbot
+# IEM-UEM Kiosk
 
-The backend has been completely migrated to a **Next.js (App Router)** application. The frontend remains a React (Vite) application but has been updated to support multiple image uploads and a continuous slideshow on the main display.
+A single **Next.js (App Router)** application containing the kiosk display, the
+admin portal, and the REST API. It deploys to Vercel as one project and uses a
+hosted PostgreSQL database (Neon).
 
 ## Prerequisites
 
-1. **Node.js** (v18+)
-2. **PostgreSQL** database running locally with the [`pgvector`](https://github.com/pgvector/pgvector) extension installed.
-3. **OpenRouter API Key** (for accessing the Muse model via the Vercel AI SDK).
+1. **Node.js** 20.9 or newer
+2. A **Neon Postgres** database (or any hosted PostgreSQL)
 
----
+## 1. Environment setup
 
-## 1. Environment & API Keys Setup
-
-You will need to provide your API keys to the backend. Navigate to the `backend/` directory and edit the `.env.local` file:
-
-```bash
-cd backend
-nano .env.local
-```
-
-Ensure the following keys are populated in your `.env.local`:
+Create `.env.local` in the repository root:
 
 ```env
-# 1. PostgreSQL Connection String (Update with your actual DB credentials)
-# Ensure the database (e.g., iem_uem_kiosk) exists and the user has permissions.
-DATABASE_URL="postgresql://iem_uem:iem_uem_password@localhost:5432/iem_uem_kiosk"
+# Neon pooled connection string (hostname contains "-pooler")
+DATABASE_URL="postgresql://USER:PASSWORD@ep-xxxx-pooler.region.aws.neon.tech/neondb?sslmode=require"
 
-# 2. OpenRouter API Key (Required for the Vercel AI SDK to call the Muse model)
-OPENROUTER_API_KEY="your_openrouter_api_key_here"
-
-# 3. JWT Secret (Used for Admin Portal sessions)
+# Random secret used to sign admin portal JWTs
 JWT_SECRET_KEY="your_secure_random_string_here"
+
+# Optional super-admin overrides (defaults live in src/lib/db.ts)
+# SUPER_ADMIN_USERNAME="you@example.edu"
+# SUPER_ADMIN_PASSWORD="a-strong-password"
 ```
 
----
+Generate a JWT secret with:
 
-## 2. Backend Setup (Next.js)
+```bash
+openssl rand -hex 32
+```
 
-The backend uses **Vercel AI SDK**, **pgvector** for RAG, and **Xenova Transformers** (for fast, local embedding of text chunks without an external API).
+## 2. Install and initialize
 
-1. Install backend dependencies:
-   ```bash
-   cd backend
-   npm install
-   ```
-2. **Initialize the Database:**
-   This script will automatically enable the `vector` extension, create the necessary tables (`admin_users` and `document_chunks`), and insert the default admin user account (Username: `admin`, Password: `admin`).
-   ```bash
-   npm run init-db
-   ```
-3. Start the backend development server:
-   ```bash
-   npm run dev
-   ```
-   *The backend will now be running on `http://localhost:8000`.*
+```bash
+npm install
+npm run init-db
+```
 
----
+`init-db` creates the tables and seeds a default admin account
+(`admin` / `admin`). Change that password before exposing the admin portal.
 
-## 3. Frontend Setup (Vite + React)
+## 3. Run locally
 
-The frontend is a Vite app. It connects to the Next.js backend on port 8000.
+```bash
+npm run dev
+```
 
-1. Open a new terminal and navigate to the frontend:
-   ```bash
-   cd frontend
-   ```
-2. Install frontend dependencies:
-   ```bash
-   npm install
-   ```
-3. Start the frontend development server:
-   ```bash
-   npm run dev
-   ```
+- Kiosk display: `http://localhost:3000`
+- Admin portal: `http://localhost:3000/admin`
 
-* **Kiosk Display:** `http://localhost:5173`
-* **Admin Portal:** `http://localhost:5173/admin`
+The kiosk fetches `/api/content` every 60 seconds and falls back to mock data in
+`src/data/mockData.ts` if the API is unavailable.
 
----
+## Deploying to Vercel
 
-## What Changed?
+1. Push the repository to GitHub/GitLab/Bitbucket.
+2. In Vercel, **Add New → Project** and import the repository.
+3. Leave the **Root Directory** as the repository root. Vercel detects Next.js
+   automatically; do not set a custom build command.
+4. Add these **Environment Variables** for Production (and Preview if desired):
+   - `DATABASE_URL` — the Neon **pooled** connection string (`-pooler` host),
+     including `?sslmode=require`
+   - `JWT_SECRET_KEY` — a random secret
+   - optionally `SUPER_ADMIN_USERNAME` / `SUPER_ADMIN_PASSWORD`
+5. Deploy.
 
-* **Next.js Backend:** The complete backend architecture (FastAPI/Python) was replaced with Next.js API routes (`backend/src/app/api`).
-* **Vercel AI SDK & OpenRouter:** Replaced local Ollama execution with `pgvector` RAG tools called directly by the OpenRouter `meta/muse-spark-1.3` model.
-* **Admin Portal UI:** Removed the scrollbar when logged in (`overflow: hidden`).
-* **Multiple Image Uploads:** The `EventEditor` now allows selecting multiple images.
-* **Slideshow Display:** `EventBanner.tsx` displays the 1st image for 3 seconds, transitions to the next, and seamlessly loops back to the first in a continuous circular loop.
-* **Vectorizing MD files:** The `knowledge_base/*.md` files are chunked and converted into vectors using the `Xenova/all-MiniLM-L6-v2` embedding model before being stored in PostgreSQL.
+Run `npm run init-db` once from your machine with the Neon `DATABASE_URL` in
+`.env.local` before logging into the deployed admin portal. It is not run
+automatically on Vercel.
+
+Notes:
+
+- `next.config.mjs` disables `output: "standalone"` when `VERCEL` is set, so
+  Vercel uses its native output while the Dockerfile still works for
+  self-hosting.
+- Uploaded images are stored in Postgres and served through `/api/images/[id]`.
+  Vercel's request body limit (4.5 MB) therefore caps each upload.
+- Use the Neon pooled connection string on serverless deployments to avoid
+  exhausting database connections.
+
+## Project structure
+
+```
+src/
+  app/
+    page.tsx                 kiosk display (/)
+    admin/page.tsx           admin portal (/admin)
+    layout.tsx, globals.css  root layout and global styles
+    api/                     REST API route handlers
+  components/                kiosk UI (header, tickers, event banner)
+  admin/                     admin portal components
+  lib/
+    api.ts                   client-side API helpers (same-origin)
+    db.ts, auth.ts           server-side database and auth
+  data/mockData.ts           fallback kiosk content
+  scripts/initDb.ts          database bootstrap
+public/                      branding and static assets
+```
+
+## Legacy self-hosting
+
+The `deploy/` directory contains the old FastAPI/nginx/systemd setup and predates
+this unified Next.js migration. It is not required for Vercel. For a Docker
+deployment, the root `Dockerfile` builds the Next.js standalone server.
