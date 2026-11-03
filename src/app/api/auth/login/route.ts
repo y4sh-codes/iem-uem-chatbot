@@ -27,7 +27,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ detail: "Invalid credentials" }, { status: 401 });
     }
     
-    const role = user.role === 'super_admin' ? 'super_admin' : 'admin';
+    const role = user.role === 'super_admin'
+      ? 'super_admin'
+      : user.role === 'vc_office'
+      ? 'vc_office'
+      : 'admin';
     const token = jwt.sign(
       { sub: user.username, username: user.username, role },
       JWT_SECRET,

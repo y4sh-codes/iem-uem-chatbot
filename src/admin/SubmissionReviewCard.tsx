@@ -4,10 +4,12 @@ import {
   reviewEventSubmission,
   type EventSubmission,
 } from "@/lib/api";
+import { formatSchedule } from "@/lib/eventSchedule";
 
 /**
- * Super-admin queue for event slides submitted by regular admins.
- * Approving publishes the slide to the kiosk right-hand panel.
+ * Review queue for event slides submitted by regular admins (visible to super
+ * admins and the VC office). Approving publishes the slide to the kiosk
+ * right-hand panel.
  */
 interface SubmissionReviewCardProps {
   token: string;
@@ -81,6 +83,8 @@ export default function SubmissionReviewCard({ token, onReviewed }: SubmissionRe
               </div>
               <div className="submission-meta">
                 Submitted by {submission.created_by}
+                {` · ${submission.category || "Events"}`}
+                {formatSchedule(submission) ? ` · ${formatSchedule(submission)}` : ""}
               </div>
               {submission.subtitle && (
                 <div className="submission-subtitle">{submission.subtitle}</div>

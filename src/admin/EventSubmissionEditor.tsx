@@ -5,12 +5,26 @@ import {
   submitEventSlides,
   updateEventSubmission,
   type EventSubmission,
+  type RightPanelSlide,
 } from "@/lib/api";
+import { formatSchedule } from "@/lib/eventSchedule";
+import EventScheduleFields from "./EventScheduleFields";
+
+const EMPTY_SCHEDULE: Pick<
+  RightPanelSlide,
+  "category" | "start_date" | "end_date" | "start_time" | "end_time"
+> = {
+  category: "Events",
+  start_date: null,
+  end_date: null,
+  start_time: null,
+  end_time: null,
+};
 
 function statusLabel(status: EventSubmission["status"]) {
   if (status === "approved") return "Approved -- live on kiosk";
   if (status === "rejected") return "Rejected";
-  return "Pending super-admin approval";
+  return "Pending approval";
 }
 
 export default function EventSubmissionEditor({ token }: { token: string }) {
@@ -18,6 +32,7 @@ export default function EventSubmissionEditor({ token }: { token: string }) {
   const [title, setTitle] = useState("");
   const [subtitle, setSubtitle] = useState("");
   const [details, setDetails] = useState("");
+  const [schedule, setSchedule] = useState(EMPTY_SCHEDULE);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -44,6 +59,7 @@ export default function EventSubmissionEditor({ token }: { token: string }) {
     setTitle("");
     setSubtitle("");
     setDetails("");
+    setSchedule(EMPTY_SCHEDULE);
     setEditingId(null);
   };
 
@@ -58,11 +74,11 @@ export default function EventSubmissionEditor({ token }: { token: string }) {
     setMessage("");
     try {
       if (editingId !== null) {
-        await updateEventSubmission(token, editingId, { title, subtitle, details });
+        await updateEventSubmission(token, editingId, { title, subtitle, details, ...schedule });
         setMessage("Updated and sent back for approval.");
       } else {
-        await submitEventSlides(token, [{ title, subtitle, details }]);
-        setMessage("Submitted -- waiting for super-admin approval.");
+        await submitEventSlides(token, [{ title, subtitle, details, ...schedule }]);
+        setMessage("Submitted -- waiting for approval.");
       }
       resetForm();
       await loadSubmissions();
@@ -78,6 +94,13 @@ export default function EventSubmissionEditor({ token }: { token: string }) {
     setTitle(submission.title);
     setSubtitle(submission.subtitle);
     setDetails(submission.details);
+    setSchedule({
+      category: submission.category || "Events",
+      start_date: submission.start_date || null,
+      end_date: submission.end_date || null,
+      start_time: submission.start_time || null,
+      end_time: submission.end_time || null,
+    });
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -98,11 +121,11 @@ export default function EventSubmissionEditor({ token }: { token: string }) {
       <h2 className="admin-card-title">Event Panel (Right Side Slideshow)</h2>
       <p className="admin-card-desc">
         Add text slides for the right-hand event panel. Your slides are shown on the kiosk
-        only after the super admin approves them.
+        only after a super admin or VC office user approves them.
       </p>
 
       <form onSubmit={handleSubmit}>
-        <label className="admin-label">Panel Title (Large)</label>
+        <label className="admin-label">Event Name</label>
         <input
           className="admin-input"
           value={title}
@@ -110,21 +133,28 @@ export default function EventSubmissionEditor({ token }: { token: string }) {
           placeholder="e.g. UPCOMING EVENTS"
         />
 
-        <label className="admin-label">Panel Subtitle (Medium)</label>
+        <label className="admin-label">Tagline</label>
         <input
           className="admin-input"
           value={subtitle}
           onChange={(e) => setSubtitle(e.target.value)}
           placeholder="e.g. Join us for our next big activities"
+          maxLength={30}
         />
 
-        <label className="admin-label">Panel Details (Small)</label>
+        <label className="admin-label">Description</label>
         <textarea
           className="admin-input"
           value={details}
           onChange={(e) => setDetails(e.target.value)}
           placeholder="e.g. Detailed information about the event..."
           rows={3}
+          maxLength={120}
+        />
+
+        <EventScheduleFields
+          value={schedule}
+          onChange={(patch) => setSchedule((prev) => ({ ...prev, ...patch }))}
         />
 
         <div className="admin-card-footer">
@@ -146,7 +176,7 @@ export default function EventSubmissionEditor({ token }: { token: string }) {
 
       <h2 className="admin-card-title" style={{ marginTop: "28px" }}>Your Submissions</h2>
       <p className="admin-card-desc">
-        Pending slides wait for the super admin. Approved slides are live on the kiosk.
+        Pending slides wait for a super admin or VC office user. Approved slides are live on the kiosk.
       </p>
 
       {loading ? (
@@ -162,6 +192,10 @@ export default function EventSubmissionEditor({ token }: { token: string }) {
                 <span className={`admin-status ${submission.status}`}>
                   {statusLabel(submission.status)}
                 </span>
+              </div>
+              <div className="submission-meta">
+                {submission.category || "Events"}
+                {formatSchedule(submission) ? ` · ${formatSchedule(submission)}` : ""}
               </div>
               {submission.subtitle && (
                 <div className="submission-subtitle">{submission.subtitle}</div>

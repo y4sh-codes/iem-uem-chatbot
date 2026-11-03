@@ -1,5 +1,6 @@
 import { useRef, useState, useEffect } from "react";
 import { resolveImageUrl, type EventSlide, type RightPanelSlide } from "@/lib/api";
+import EventScheduleFields from "./EventScheduleFields";
 
 interface EventEditorProps {
   events: EventSlide[];
@@ -84,14 +85,30 @@ export default function EventEditor({
   };
 
   const addRightSlide = () => {
-    setRightSlides([...rightSlides, { title: "", subtitle: "", details: "" }]);
+    setRightSlides([
+      ...rightSlides,
+      {
+        title: "",
+        subtitle: "",
+        details: "",
+        category: "Events",
+        start_date: null,
+        end_date: null,
+        start_time: null,
+        end_time: null,
+      },
+    ]);
   };
 
   const removeRightSlide = (idx: number) => {
     setRightSlides(rightSlides.filter((_, i) => i !== idx));
   };
 
-  const updateRightSlide = (idx: number, field: keyof RightPanelSlide, value: string) => {
+  const updateRightSlide = <K extends keyof RightPanelSlide>(
+    idx: number,
+    field: K,
+    value: RightPanelSlide[K]
+  ) => {
     const newSlides = [...rightSlides];
     newSlides[idx] = { ...newSlides[idx], [field]: value };
     setRightSlides(newSlides);
@@ -117,7 +134,7 @@ export default function EventEditor({
                 ✕
               </button>
             </div>
-            <label className="admin-label">Panel Title (Large)</label>
+            <label className="admin-label">Event Name</label>
             <input
               className="admin-input"
               value={slide.title}
@@ -125,21 +142,32 @@ export default function EventEditor({
               placeholder="e.g. UPCOMING EVENTS"
             />
 
-            <label className="admin-label">Panel Subtitle (Medium)</label>
+            <label className="admin-label">Tagline</label>
             <input
               className="admin-input"
               value={slide.subtitle}
               onChange={(e) => updateRightSlide(idx, 'subtitle', e.target.value)}
               placeholder="e.g. Join us for our next big activities"
+              maxLength={30}
             />
 
-            <label className="admin-label">Panel Details (Small)</label>
+            <label className="admin-label">Description</label>
             <textarea
               className="admin-input"
               value={slide.details}
               onChange={(e) => updateRightSlide(idx, 'details', e.target.value)}
               placeholder="e.g. Detailed information about the events..."
               rows={3}
+              maxLength={120}
+            />
+
+            <EventScheduleFields
+              value={slide}
+              onChange={(patch) => {
+                const newSlides = [...rightSlides];
+                newSlides[idx] = { ...newSlides[idx], ...patch };
+                setRightSlides(newSlides);
+              }}
             />
           </div>
         ))}
@@ -149,6 +177,13 @@ export default function EventEditor({
             + Add Text Slide
           </button>
         </div>
+      </div>
+
+      <div className="admin-card-footer" style={{ marginTop: "0", marginBottom: "24px" }}>
+        <button className="admin-btn" onClick={handleSave} disabled={saving}>
+          {saving ? "Saving..." : "Save Event Panel"}
+        </button>
+        {message && <span className="admin-saved-message">{message}</span>}
       </div>
 
       <h2 className="admin-card-title">Event Banners (Left Side Images)</h2>

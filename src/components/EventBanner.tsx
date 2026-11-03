@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import type { EventSlide, RightPanelSlide } from "@/lib/api";
+import { formatSchedule } from "@/lib/eventSchedule";
 import "./EventBanner.css";
 
 interface EventBannerProps {
@@ -11,7 +12,8 @@ const defaultRightSlides: RightPanelSlide[] = [
   {
     title: "UPCOMING EVENTS",
     subtitle: "Join us for our next big activities",
-    details: "IEM-UEM Group constantly organizes tech fests, cultural programs, and placement drives to ensure all-around development."
+    details: "IEM-UEM Group constantly organizes tech fests, cultural programs, and placement drives to ensure all-around development.",
+    category: "Events",
   }
 ];
 
@@ -136,9 +138,13 @@ export default function EventBanner({ events, rightSlides: propRightSlides }: Ev
               style={{ width: `${100 / numRightSlides}%` }}
             >
               <div className="event-panel-content">
+                <div className="event-panel-category">{slide.category || "Events"}</div>
                 <h1 className="event-panel-title">{slide.title}</h1>
                 <h2 className="event-panel-subtitle">{slide.subtitle}</h2>
                 <h3 className="event-panel-details">{slide.details}</h3>
+                {formatSchedule(slide) && (
+                  <div className="event-panel-schedule">{formatSchedule(slide)}</div>
+                )}
               </div>
             </div>
           ))}

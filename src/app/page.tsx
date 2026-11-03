@@ -6,6 +6,7 @@ import Ticker from "@/components/Ticker";
 import EventBanner from "@/components/EventBanner";
 import { topTickerItems, bottomTickerItems, todayEvent } from "@/data/mockData";
 import { fetchContent, resolveImageUrl, type KioskContent } from "@/lib/api";
+import { localDateKey, selectVisibleRightSlides } from "@/lib/eventSchedule";
 import "./kiosk.css";
 
 // Re-fetch content periodically so admin-portal changes (new event image,
@@ -26,6 +27,12 @@ export default function KioskPage() {
       }
     ]
   });
+  const [todayKey, setTodayKey] = useState(() => localDateKey());
+
+  useEffect(() => {
+    const interval = setInterval(() => setTodayKey(localDateKey()), 60_000);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -53,13 +60,18 @@ export default function KioskPage() {
     image_url: resolveImageUrl(e.image_url)
   }));
 
+  const visibleRightSlides = selectVisibleRightSlides(
+    content.right_slides || [],
+    todayKey
+  );
+
   return (
     <div className="kiosk-shell">
       <KioskHeader />
 
       <Ticker items={content.top_ticker} position="top" />
 
-      <EventBanner events={resolvedEvents} rightSlides={content.right_slides} />
+      <EventBanner events={resolvedEvents} rightSlides={visibleRightSlides} />
 
       <Ticker items={content.bottom_ticker} position="bottom" />
 

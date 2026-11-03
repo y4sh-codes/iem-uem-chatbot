@@ -27,6 +27,15 @@ export function isSuperAdmin(user: AuthPayload | null): boolean {
   return !!user && user.role === 'super_admin';
 }
 
+export function isVcOffice(user: AuthPayload | null): boolean {
+  return !!user && user.role === 'vc_office';
+}
+
+/** Super admins and the VC office share every kiosk-management capability. */
+export function hasFullAccess(user: AuthPayload | null): boolean {
+  return isSuperAdmin(user) || isVcOffice(user);
+}
+
 /** Username stored inside the verified token. */
 export function authUsername(user: AuthPayload | null): string {
   return String(user?.username || user?.sub || '');
@@ -37,5 +46,13 @@ export function superAdminError(request: Request): NextResponse | null {
   const user = verifyAuth(request);
   if (!user) return NextResponse.json({ detail: 'Unauthorized' }, { status: 401 });
   if (!isSuperAdmin(user)) return NextResponse.json({ detail: 'Forbidden' }, { status: 403 });
+  return null;
+}
+
+/** 401/403 guard for routes both super_admin and vc_office may use. */
+export function fullAccessError(request: Request): NextResponse | null {
+  const user = verifyAuth(request);
+  if (!user) return NextResponse.json({ detail: 'Unauthorized' }, { status: 401 });
+  if (!hasFullAccess(user)) return NextResponse.json({ detail: 'Forbidden' }, { status: 403 });
   return null;
 }

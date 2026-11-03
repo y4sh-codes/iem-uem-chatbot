@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
-import { superAdminError } from '@/lib/auth';
+import { fullAccessError } from '@/lib/auth';
 import { pool } from '@/lib/db';
 
 export async function POST(request: Request) {
-  const denied = superAdminError(request);
+  const denied = fullAccessError(request);
   if (denied) return denied;
   
   const formData = await request.formData();

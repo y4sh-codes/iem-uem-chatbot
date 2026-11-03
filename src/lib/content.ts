@@ -1,9 +1,16 @@
 import { pool } from './db';
 
+export type EventCategory = "Conference" | "Hackathons" | "Events";
+
 export interface RightPanelSlide {
   title: string;
   subtitle: string;
   details: string;
+  category?: EventCategory;
+  start_date?: string | null;
+  end_date?: string | null;
+  start_time?: string | null;
+  end_time?: string | null;
 }
 
 export interface EventSlide {
@@ -40,7 +47,8 @@ export const defaultContent: KioskContent = {
     {
       title: "UPCOMING EVENTS",
       subtitle: "Join us for our next big activities",
-      details: "IEM-UEM Group constantly organizes tech fests, cultural programs, and placement drives to ensure all-around development."
+      details: "IEM-UEM Group constantly organizes tech fests, cultural programs, and placement drives to ensure all-around development.",
+      category: "Events",
     }
   ]
 };
