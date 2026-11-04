@@ -252,6 +252,69 @@ export async function reviewEventSubmission(
   }
 }
 
+// --- Content change requests (VC office proposes, super admin approves) -------
+export interface ContentChangePayload {
+  events?: EventSlide[];
+  right_slides?: RightPanelSlide[];
+  top_ticker?: string[];
+  bottom_ticker?: string[];
+}
+
+export interface ContentChangeRequest {
+  id: number;
+  created_by: string;
+  status: EventSubmissionStatus;
+  changes: ContentChangePayload;
+  summary: string;
+  created_at: string;
+  reviewed_at: string | null;
+  reviewed_by: string | null;
+}
+
+export async function submitContentChange(
+  token: string,
+  changes: ContentChangePayload
+): Promise<{ success: boolean; message: string; request: ContentChangeRequest }> {
+  const res = await fetch(`${API_BASE_URL}/api/admin/content/requests`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeaders(token) },
+    body: JSON.stringify(changes),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || `Failed to submit changes (${res.status})`);
+  }
+  return res.json();
+}
+
+export async function fetchContentChangeRequests(
+  token: string
+): Promise<ContentChangeRequest[]> {
+  const res = await fetch(`${API_BASE_URL}/api/admin/content/requests`, {
+    headers: authHeaders(token),
+  });
+  if (!res.ok) throw new Error(`Failed to load change requests (${res.status})`);
+  const data = await res.json();
+  return (data.requests || []) as ContentChangeRequest[];
+}
+
+export async function reviewContentChange(
+  token: string,
+  id: number,
+  action: "approve" | "reject"
+): Promise<{ success: boolean; status: string; message: string }> {
+  const res = await fetch(`${API_BASE_URL}/api/admin/content/requests/review`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeaders(token) },
+    body: JSON.stringify({ id, action }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || `Failed to review change request (${res.status})`);
+  }
+  return res.json();
+}
+
 // --- Super-admin activity and audit log ---------------------------------------
 export interface AdminUser {
   id: number;

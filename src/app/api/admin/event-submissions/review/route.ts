@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { ensureAdminSchema, pool } from '@/lib/db';
-import { authUsername, hasFullAccess, verifyAuth } from '@/lib/auth';
+import { authUsername, isSuperAdmin, verifyAuth } from '@/lib/auth';
 import { defaultContent, type KioskContent } from '@/lib/content';
 import { logEvent } from '@/lib/eventLog';
 
@@ -13,16 +13,16 @@ const REVIEW_COLUMNS = `
 `;
 
 /**
- * Full-access review endpoint. Approving a pending submission appends its slide
- * to the live kiosk right-panel content; rejecting it only updates the status.
- * Both happen in a single transaction with an audit-log row.
+ * Super-admin-only review endpoint. Approving a pending submission appends its
+ * slide to the live kiosk right-panel content; rejecting it only updates the
+ * status. Both happen in a single transaction with an audit-log row.
  */
 export async function POST(request: Request) {
   const user = verifyAuth(request);
   if (!user) return NextResponse.json({ detail: "Unauthorized" }, { status: 401 });
-  if (!hasFullAccess(user)) {
+  if (!isSuperAdmin(user)) {
     return NextResponse.json(
-      { detail: "Only full-access users can review submissions" },
+      { detail: "Only the super admin can review submissions" },
       { status: 403 }
     );
   }

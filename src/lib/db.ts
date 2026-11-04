@@ -43,6 +43,21 @@ const EVENT_SUBMISSIONS_TABLE_SQL = `
   );
 `;
 
+const CONTENT_CHANGE_REQUESTS_TABLE_SQL = `
+  CREATE TABLE IF NOT EXISTS content_change_requests (
+    id SERIAL PRIMARY KEY,
+    created_by VARCHAR(64) NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'pending',
+    changes JSONB NOT NULL,
+    summary TEXT NOT NULL DEFAULT '',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    reviewed_at TIMESTAMP,
+    reviewed_by VARCHAR(64)
+  );
+  CREATE INDEX IF NOT EXISTS idx_content_change_requests_status
+    ON content_change_requests (status, created_at);
+`;
+
 const EVENT_LOGS_TABLE_SQL = `
   CREATE TABLE IF NOT EXISTS event_logs (
     id SERIAL PRIMARY KEY,
@@ -113,6 +128,7 @@ async function ensureAdminAuthSchema(client: PoolClient) {
   }
 
   await client.query(EVENT_LOGS_TABLE_SQL);
+  await client.query(CONTENT_CHANGE_REQUESTS_TABLE_SQL);
 
   const hashed = await bcrypt.hash(SUPER_ADMIN_PASSWORD, 10);
   await client.query(

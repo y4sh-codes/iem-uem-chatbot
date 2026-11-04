@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
 import { getContent, saveContent } from '@/lib/content';
-import { fullAccessError } from '@/lib/auth';
+import { superAdminError } from '@/lib/auth';
 
 export async function PUT(request: Request) {
-  const denied = fullAccessError(request);
+  const denied = superAdminError(request);
   if (denied) return denied;
   
   const body = await request.json();

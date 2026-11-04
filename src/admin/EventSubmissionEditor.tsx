@@ -121,7 +121,7 @@ export default function EventSubmissionEditor({ token }: { token: string }) {
       <h2 className="admin-card-title">Event Panel (Right Side Slideshow)</h2>
       <p className="admin-card-desc">
         Add text slides for the right-hand event panel. Your slides are shown on the kiosk
-        only after a super admin or VC office user approves them.
+        only after a super admin approves them.
       </p>
 
       <form onSubmit={handleSubmit}>
@@ -176,7 +176,7 @@ export default function EventSubmissionEditor({ token }: { token: string }) {
 
       <h2 className="admin-card-title" style={{ marginTop: "28px" }}>Your Submissions</h2>
       <p className="admin-card-desc">
-        Pending slides wait for a super admin or VC office user. Approved slides are live on the kiosk.
+        Pending slides wait for the super admin. Approved slides are live on the kiosk.
       </p>
 
       {loading ? (

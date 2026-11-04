@@ -86,6 +86,18 @@ export default function EventScheduleFields({
           />
         </div>
       </div>
+
+      {(value.start_time || value.end_time) && (
+        <div className="admin-time-actions">
+          <button
+            type="button"
+            className="admin-btn secondary admin-clear-time"
+            onClick={() => onChange({ start_time: null, end_time: null })}
+          >
+            Remove time range
+          </button>
+        </div>
+      )}
     </div>
   );
 }

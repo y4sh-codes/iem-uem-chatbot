@@ -14,6 +14,9 @@ const ACTIONS = [
   { value: "approved", label: "Approved" },
   { value: "rejected", label: "Rejected" },
   { value: "content_updated", label: "Content updated" },
+  { value: "requested", label: "Change requested" },
+  { value: "request_approved", label: "Change approved" },
+  { value: "request_rejected", label: "Change rejected" },
 ];
 
 function formatTimestamp(value: string): string {

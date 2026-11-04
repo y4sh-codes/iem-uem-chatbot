@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server';
 import { getContent, saveContent } from '@/lib/content';
-import { authUsername, fullAccessError, verifyAuth } from '@/lib/auth';
+import { authUsername, superAdminError, verifyAuth } from '@/lib/auth';
 import { ensureAdminSchema, pool } from '@/lib/db';
 import { logEvent } from '@/lib/eventLog';
 
 export async function PUT(request: Request) {
-  const denied = fullAccessError(request);
+  const denied = superAdminError(request);
   if (denied) return denied;
 
   const body = await request.json();

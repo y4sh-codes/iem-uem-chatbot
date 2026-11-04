@@ -5,7 +5,10 @@ import EventScheduleFields from "./EventScheduleFields";
 interface EventEditorProps {
   events: EventSlide[];
   rightSlides: RightPanelSlide[];
-  onSave: (events: EventSlide[], rightSlides: RightPanelSlide[]) => Promise<void>;
+  onSave: (
+    events: EventSlide[],
+    rightSlides: RightPanelSlide[]
+  ) => Promise<string | void>;
   onUploadImage: (file: File) => Promise<{ urls: string[] }>;
 }
 
@@ -35,8 +38,8 @@ export default function EventEditor({
     setSaving(true);
     setMessage("");
     try {
-      await onSave(localEvents, rightSlides);
-      setMessage("Saved.");
+      const result = await onSave(localEvents, rightSlides);
+      setMessage(result || "Saved.");
       setTimeout(() => setMessage(""), 2500);
     } catch (err) {
       setMessage(err instanceof Error ? err.message : "Failed to save.");

@@ -4,7 +4,7 @@ interface TickerEditorProps {
   title: string;
   description: string;
   items: string[];
-  onSave: (items: string[]) => Promise<void>;
+  onSave: (items: string[]) => Promise<string | void>;
 }
 
 export default function TickerEditor({ title, description, items, onSave }: TickerEditorProps) {
@@ -42,8 +42,8 @@ export default function TickerEditor({ title, description, items, onSave }: Tick
     setSaving(true);
     setSavedMessage("");
     try {
-      await onSave(localItems);
-      setSavedMessage("Saved.");
+      const result = await onSave(localItems);
+      setSavedMessage(result || "Saved.");
       setTimeout(() => setSavedMessage(""), 2500);
     } catch (err) {
       setSavedMessage(err instanceof Error ? err.message : "Failed to save.");

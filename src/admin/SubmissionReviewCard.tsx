@@ -7,9 +7,8 @@ import {
 import { formatSchedule } from "@/lib/eventSchedule";
 
 /**
- * Review queue for event slides submitted by regular admins (visible to super
- * admins and the VC office). Approving publishes the slide to the kiosk
- * right-hand panel.
+ * Super-admin review queue for event slides submitted by regular admins.
+ * Approving publishes the slide to the kiosk right-hand panel.
  */
 interface SubmissionReviewCardProps {
   token: string;

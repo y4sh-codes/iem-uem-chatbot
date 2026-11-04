@@ -7,6 +7,7 @@ import {
   uploadEventImages,
   addAdminUser,
   resetPassword,
+  submitContentChange,
   type AdminRole,
   type AdminSession,
   type KioskContent,
@@ -15,6 +16,7 @@ import TickerEditor from "./TickerEditor";
 import EventEditor from "./EventEditor";
 import EventSubmissionEditor from "./EventSubmissionEditor";
 import SubmissionReviewCard from "./SubmissionReviewCard";
+import ContentChangeReviewCard from "./ContentChangeReviewCard";
 import AdminActivityCard from "./AdminActivityCard";
 import EventLogCard from "./EventLogCard";
 import "./AdminApp.css";
@@ -76,7 +78,8 @@ export default function AdminApp() {
   const [loadError, setLoadError] = useState("");
 
   const isSuperAdmin = role === "super_admin";
-  const hasFullAccess = role === "super_admin" || role === "vc_office";
+  const isVcOffice = role === "vc_office";
+  const hasFullAccess = isSuperAdmin || isVcOffice;
 
   const loadContent = async () => {
     try {
@@ -125,8 +128,8 @@ export default function AdminApp() {
           <div className="admin-header-subtitle">
             {isSuperAdmin
               ? "Super admin -- full kiosk access"
-              : hasFullAccess
-              ? "VC office -- full kiosk access (admin management excluded)"
+              : isVcOffice
+              ? "VC office -- changes require super-admin approval"
               : "Event admin -- submit slides for super-admin approval"}
           </div>
         </div>
@@ -145,6 +148,13 @@ export default function AdminApp() {
                 events={content.events || []}
                 rightSlides={content.right_slides || []}
                 onSave={async (events, rightSlides) => {
+                  if (isVcOffice) {
+                    const result = await submitContentChange(token, {
+                      events,
+                      right_slides: rightSlides,
+                    });
+                    return result.message;
+                  }
                   const updated = await updateEvents(token, events, rightSlides);
                   setContent(updated);
                 }}
@@ -155,7 +165,12 @@ export default function AdminApp() {
               />
             )}
 
-            <SubmissionReviewCard token={token} onReviewed={loadContent} />
+            {isSuperAdmin && (
+              <SubmissionReviewCard token={token} onReviewed={loadContent} />
+            )}
+            {isSuperAdmin && (
+              <ContentChangeReviewCard token={token} onReviewed={loadContent} />
+            )}
 
             {content && (
               <TickerEditor
@@ -163,6 +178,12 @@ export default function AdminApp() {
                 description="Scrolls across the top of the kiosk screen (accreditations, rankings, awards, etc.)"
                 items={content.top_ticker}
                 onSave={async (items) => {
+                  if (isVcOffice) {
+                    const result = await submitContentChange(token, {
+                      top_ticker: items,
+                    });
+                    return result.message;
+                  }
                   const updated = await updateTickers(token, items, null);
                   setContent(updated);
                 }}
@@ -175,6 +196,12 @@ export default function AdminApp() {
                 description="Scrolls across the bottom of the kiosk screen (notices, placement drives, events, etc.)"
                 items={content.bottom_ticker}
                 onSave={async (items) => {
+                  if (isVcOffice) {
+                    const result = await submitContentChange(token, {
+                      bottom_ticker: items,
+                    });
+                    return result.message;
+                  }
                   const updated = await updateTickers(token, null, items);
                   setContent(updated);
                 }}
@@ -321,8 +348,8 @@ function AdminUserCard({ token }: { token: string }) {
     <div className="admin-card">
       <h2 className="admin-card-title">Manage admins</h2>
       <p className="admin-card-desc">
-        Create an event admin (event panel access) or a VC office user (full
-        access except admin management).
+        Create an event admin or a VC office user. VC office changes require
+        super-admin approval.
       </p>
       <form onSubmit={handleAddUser} style={{ display: "flex", flexDirection: "column", gap: "10px", marginTop: "1rem" }}>
         <input
@@ -371,7 +398,7 @@ function AdminUserCard({ token }: { token: string }) {
               checked={role === "vc_office"}
               onChange={() => setRole("vc_office")}
             />
-            VC office (full access)
+            VC office (changes need approval)
           </label>
         </div>
 
